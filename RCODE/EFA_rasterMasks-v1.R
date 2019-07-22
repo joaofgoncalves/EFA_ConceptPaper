@@ -17,6 +17,13 @@ for(Dir in dirsToParse){
   i <- i + 1
   varName <- basename(Dir)
   
+  fnOut <- paste("./DATA/RASTER/Masks/mask_",varName,".tif",sep="")
+  if(file.exists(fnOut)){
+    cat("\nSkipping!\n\n")
+    next
+  }
+    
+  
   rstFilePath <- list.files(Dir, pattern = ".tif$", full.names = TRUE)
   rstStack <- stack(rstFilePath)
   
@@ -27,7 +34,7 @@ for(Dir in dirsToParse){
   newRst <- rstStack[[1]]
   values(newRst) <- maskValues
   
-  writeRaster(newRst, paste("./DATA/RASTER/Masks/mask_",varName,".tif",sep=""))
+  writeRaster(newRst, fnOut)
   setTxtProgressBar(pb, i)
 }
 
