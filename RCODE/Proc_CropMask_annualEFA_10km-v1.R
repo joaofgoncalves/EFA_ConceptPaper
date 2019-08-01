@@ -36,8 +36,7 @@ rstMask <- raster("./DATA/RASTER/Masks/EFA_10km_mask.tif")
 outFolder <- "./DATA/RASTER/EFA_ANNUAL_v2"
 
 dirsToParse <- list.dirs("./DATA/RASTER/EFA_ANNUAL", recursive = FALSE)
-
-dirsToParse <- dirsToParse[18:22]
+#dirsToParse <- dirsToParse[18:22]
 
 yrs <- 2001:2018
 
@@ -58,10 +57,17 @@ for(Dir in dirsToParse){
   }
   
   rstFilePath <- list.files(Dir, pattern = ".tif$", full.names = TRUE)
+  
+  # Ignore empty dirs
+  if(length(rstFilePath)==0){
+    cat("\n\n[",Dir,"] Empty directory! Skipping .............\n\n")
+    next
+  }
+  
   rstStack <- stack(rstFilePath)
   
   
-  ## WRITING RASTER DATA TO YEARLY FILES -------------------------------
+  ## WRITING RASTER DATA TO ANNUAL FILES -------------------------------
   ##
   ##
   nl <- nlayers(rstStack)
@@ -74,7 +80,7 @@ for(Dir in dirsToParse){
     outFn <- paste(outDir,"/",varName,"_",yr,"_v1_20190722.tif",sep="")
     
     if(file.exists(outFn)){
-      cat("\n\n-> File already exists! Skipping ............ \n\n")
+      cat("\n\n[",outFn,"] File already exists! Skipping ............ \n\n")
       next
     }
     
