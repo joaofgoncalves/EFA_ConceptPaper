@@ -48,47 +48,61 @@ selVarsBySpecies <- readRDS("D:/MyDocs/Projects/EFA_ConceptPaper/OUT/selVarsBySp
 
 ## Load raster data by year / make one raster stack with all variables per year ---------------------------
 
-dirList <- list.dirs("D:/MyDocs/Projects/EFA_ConceptPaper/DATA/RASTER/EFA_ANNUAL_v2", recursive = FALSE)
-
-fileListAll <- list.files("D:/MyDocs/Projects/EFA_ConceptPaper/DATA/RASTER/EFA_ANNUAL_v2", 
-                          pattern=".tif$", full.names = TRUE, recursive = TRUE)
-
-
-filesByVar <- list()
-for(varName in varNames){
-  filesByVar[[varName]] <- fileListAll[grepl(varName,fileListAll)]
-}
-
-yrs<-2001:2017
-rstFileListsByYr<-list()
-
-i<-0
-for(yr in yrs){
-  i<-i+1
-  rstFileListsByYr[[i]] <- vector(length=length(varNames))
-  j<-0
+loadRasterData <- function(current = NULL, yrs = 2001:2018){
+  
+  dirList <- list.dirs("D:/MyDocs/Projects/EFA_ConceptPaper/DATA/RASTER/EFA_ANNUAL_v2", recursive = FALSE)
+  
+  fileListAll <- list.files("D:/MyDocs/Projects/EFA_ConceptPaper/DATA/RASTER/EFA_ANNUAL_v2", 
+                            pattern=".tif$", full.names = TRUE, recursive = TRUE)
+  
+  filesByVar <- list()
   for(varName in varNames){
-    j<-j+1
-    rstFileListsByYr[[i]][j] <- filesByVar[[varName]][i]
+    filesByVar[[varName]] <- fileListAll[grepl(varName, fileListAll)]
   }
+  
+  rstFileListsByYr<-list()
+  
+  i<-0
+  for(yr in yrs){
+    i<-i+1
+    rstFileListsByYr[[i]] <- vector(length=length(varNames))
+    j<-0
+    for(varName in varNames){
+      j<-j+1
+      rstFileListsByYr[[i]][j] <- filesByVar[[varName]][i]
+    }
+  }
+  
+  rstStacksByYear <- list()
+  i<-0
+  for(yr in yrs){
+    i<-i+1
+    rstStacksByYear[[i]] <- stack(rstFileListsByYr[[i]])
+    names(rstStacksByYear[[i]]) <- varNames
+  }
+  
+  # Add current to projections list
+  if(!is.null(current)){
+    rstStacksByYear[[length(rstStacksByYear) + 1]] <- current
+    projNames <- c(paste("year",yrs,sep=""), "multiYearAvg")
+  }else{
+    projNames <- paste("year", yrs, sep="")
+  }
+  
+  assign("rstFileListsByYr",rstFileListsByYr,envir = .GlobalEnv)
+  assign("filesByVar",filesByVar,envir = .GlobalEnv)
+  assign("rstStacksByYear",rstStacksByYear,envir = .GlobalEnv)
+  assign("yrs",yrs,envir = .GlobalEnv)
+  assign("projNames",projNames,envir = .GlobalEnv)
+  assign("dirList",dirList,envir = .GlobalEnv)
+  assign("fileListAll",fileListAll,envir = .GlobalEnv)
+  
 }
 
-rstStacksByYear <- list()
-i<-0
-for(yr in yrs){
-  i<-i+1
-  rstStacksByYear[[i]] <- stack(rstFileListsByYr[[i]])
-  names(rstStacksByYear[[i]]) <- varNames
-}
-
-# Add current to projections list
-rstStacksByYear[[length(rstStacksByYear)+1]] <- current
-
-# Make projection names
-projNames <- c(paste("year",yrs,sep=""), "multiYearAvg")
+loadRasterData()
 
 
-## Run biomod2 modelling steps -------------------------------------------------------------------------------
+## Run biomod2 modelling steps --------------------------------------------------------------------
 
 for(i in 1:length(spNames)){
   
@@ -200,7 +214,9 @@ for(i in 1:length(spNames)){
                                        nrBestAlgos = 7,
                                        bestAlgoFun = stats::median,
                                        topFraction = 0.10)
-
+  
+  selMods <- selMods[!grepl("_MAXENT.Tsuruoka",selMods)]
+  
   myBiomodEM <- BIOMOD_EnsembleModeling(modeling.output = myBiomodModelOut,
                                         #chosen.models = 'all',
                                         chosen.models = selMods,
@@ -222,13 +238,42 @@ for(i in 1:length(spNames)){
   write.csv(emEvalDF, file = paste(getwd(),"/",sp,"/",sp,"_EnsMod_evalDF_AllMetrics.csv",sep=""))
   
   ## -------------------------------------------------------------------------------------- ##
-  ## Obtain spatiotemporal projections ----
+  ## Obtain spatiotemporal projections for each RasterStack object ----
   ## -------------------------------------------------------------------------------------- ##
+  
+  # setwd("D:/MyDocs/Projects/EFA_ConceptPaper/OUT/MODS/R1")
+  # rdataFiles <- list.files(pattern=".RData$")
+  # print(rdataFiles)
+  
+  # Species including FPAR or LAI
+  #
+  # load("Gorilla.gorilla_ModObjects.RData")
+  # load("Panthera.tigris_ModObjects.RData")
+  # load("Pongo.pygmaeus_ModObjects.RData")
+  
+  # Species not including FPAR or LAI
+  #
+  # load("Elephas.maximus_ModObjects.RData")
+  # load("Gorilla.beringei_ModObjects.RData")
+  # load("Grus.americana_ModObjects.RData")
+  # load("Uncia.uncia_ModObjects.RData")
+  
+  # setwd("./Gorilla.gorilla")
+  
   # Models to consider in the ensemble and projection
   modelsToUse <- get_kept_models(myBiomodEM, 1)
+  # Remove Maxent Tsuruoka from prediction --> NOT WORKING in this R version!!!!
+  modelsToUse <- modelsToUse[!grepl("MAXENT.Tsuruoka",modelsToUse)]
   
+  #### ------------------------------------------- ####
+  ## !!! NOW RELOAD THE RASTER STACKS AFTER load() !!!!
+  #### ------------------------------------------- ####
+  #loadRasterData()
   
-  for(k in 1:length(rstStacksByYear)){
+  #lenYrsIdx <- 1:length(rstStacksByYear)
+  lenYrsIdx <- 18
+  
+  for(k in lenYrsIdx){
     
     projName <- projNames[k] # Projection name
     
@@ -261,10 +306,12 @@ for(i in 1:length(spNames)){
     dir.create(outFolder)
     
     convertToGeoTIFF(inFolder, outFolder)
-    
-    save.image(file=paste(sp,"ModObjects.RData",sep="_"))
-    
+
   }
+  
+  # Save all the data to a RData file
+  save.image(file=paste(sp,"ModObjects.RData",sep="_"))
+  
 }
 
 
