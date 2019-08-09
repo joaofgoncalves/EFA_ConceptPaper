@@ -9,7 +9,7 @@ library(tidyr)
 library(sf)
 library(sp)
 library(biomod2plus)
-
+library(rgdal)
 
 
 setwd("D:/MyDocs/Projects/EFA_ConceptPaper/OUT/MODS/R1")
@@ -23,6 +23,12 @@ spNames <- unique(gbifData$species)
 spNames <- spNames[-c(1,8)]
 # Subset species occurrences data
 gbifData <- gbifData %>% filter(species %in% spNames)
+
+GBIF_spRecordsPt <- SpatialPointsDataFrame(gbifData[,c("decimalLongitude","decimalLatitude")],
+                                      proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"),
+                                      data = gbifData)
+
+writeOGR(GBIF_spRecordsPt,"./OUT",layer = "GBIF_data_all",driver = "ESRI Shapefile")
 
 ## Load variables from raster files with EFA's -------------------------------------------------------------
 ## These are input variables data with inter-annual means for the target variables
