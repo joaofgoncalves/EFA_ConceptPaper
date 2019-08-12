@@ -102,40 +102,49 @@ setwd("D:/MyDocs/Projects/EFA_ConceptPaper/OUT/MODS/R1_MOD_PREDS")
 
 for(sp in spNames){
   
-  cat("--> Processing species:",sp,"\n\n")
+  cat("## ----------------------------------------------------------------------------##\n")
+  cat("## Processing species:",sp,"\n")
+  cat("## ----------------------------------------------------------------------------##\n\n")
   
   rstEns <- rstEnsBySp[[sp]]
-  rstBin <- rstEnsBySp[[sp]]
+  rstBin <- rstBinBySp[[sp]]
+  
+  
+  binSum <- calc(rstBin, sum)
+  writeRaster(binSum, paste(sp,"_HS_Bin_SumPreds.tif",sep=""), overwrite=TRUE)
+  message("Finished calculating the sum for 0-1 predictions!")
+  
+  binSumPerc <- (binSum / nlayers(rstBin)) * 100
+  writeRaster(binSumPerc, paste(sp,"_HS_Bin_SumPredsPerc.tif",sep=""), overwrite=TRUE)
+  message("Finished calculating the % sum for 0-1 predictions!")
+  
+  binMode <- modal(rstBin)
+  writeRaster(binMode, paste(sp,"_HS_Bin_ModalClass.tif",sep=""), overwrite=TRUE)
+  message("Finished calculating the mode of 0-1 predictions!")
+  
+  
   
   ensAvg <- calc(rstEns, mean)
   writeRaster(ensAvg, paste(sp,"_HS_Ensemble_Avg.tif",sep=""), overwrite=TRUE)
   message("Finished calculating the average!")
   
   ensStd <- calc(rstEns, sd)
-  writeRaster(ensAvg, paste(sp,"_HS_Ensemble_Std.tif",sep=""), overwrite=TRUE)
+  writeRaster(ensStd, paste(sp,"_HS_Ensemble_Std.tif",sep=""), overwrite=TRUE)
   message("Finished calculating the standard-deviation!")
   
   ensCov <- ensStd / ensAvg
-  writeRaster(ensAvg, paste(sp,"_HS_Ensemble_CoV.tif",sep=""), overwrite=TRUE)
+  writeRaster(ensCov, paste(sp,"_HS_Ensemble_CoV.tif",sep=""), overwrite=TRUE)
   message("Finished calculating the Coeff. of variation!")
   
   ensTrendSlope <- calc(rstEns, senTrendSlope)
-  writeRaster(ensAvg, paste(sp,"_HS_Ensemble_SenSlope.tif",sep=""), overwrite=TRUE)
+  writeRaster(ensTrendSlope, paste(sp,"_HS_Ensemble_SenSlope.tif",sep=""), overwrite=TRUE)
   message("Finished calculating the Sen-slope!")
 
   ensMultimodalStat <- calc(rstEns, multiModalTest)
-  writeRaster(ensAvg, paste(sp,"_HS_Ensemble_MultimodalTest.tif",sep=""), overwrite=TRUE)
+  writeRaster(ensMultimodalStat, paste(sp,"_HS_Ensemble_MultimodalTest.tif",sep=""), overwrite=TRUE)
   message("Finished calculating the Multimodal test stat!")
 
-  binSum <- calc(rstBin, sum)
-  writeRaster(ensAvg, paste(sp,"_HS_Bin_SumPreds.tif",sep=""), overwrite=TRUE)
-  message("Finished calculating the sum for 0-1 predictions!")
-  
-  binMode <- modal(rstBin)
-  writeRaster(ensAvg, paste(sp,"_HS_Bin_ModalClass.tif",sep=""), overwrite=TRUE)
-  message("Finished calculating the mode of 0-1 predictions!")
-  
-  cat("\n\n--> Finished processing species:",sp,"\n\n")
+  cat("\n--> Finished processing species:",sp,"\n\n")
 }
 
 
